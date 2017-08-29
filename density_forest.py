@@ -210,15 +210,17 @@ class Tree:
 
         
         node = self.build_tree()
-        self.tree_nodes = self.extract_levels(node)
+
+        self.tree_nodes_depth = self.extract_levels(node)
+        self.tree_nodes_domain = self.extract_domain_splits(node)
+
 
 
     def _compute_det_lamb(self, S):
 
         if S.shape[0] > 2:
             return np.log(np.linalg.det(np.cov(S, rowvar=False)))
-
-        return float('inf')
+        return 1e5
 
     def entropy_gain(self, S, ind, axis):
         """
@@ -231,7 +233,12 @@ class Tree:
         right_entropy = self._compute_det_lamb(S_right)*len(S_right)/len(S)
         left_entropy = self._compute_det_lamb(S_left)*len(S_left)/len(S)
 
-        return self._compute_det_lamb(S) - (left_entropy + right_entropy)
+
+        a = self._compute_det_lamb(S)
+        b = right_entropy
+        c = left_entropy
+        
+        return a - (b + c)
 
 
     def build_tree(self):
@@ -265,11 +272,7 @@ class Tree:
 
         local_data = self.data[(right)&(left)&(top)&(bottom)]
 
-        # Stop Condition
-        if depth == 4:
-            leaf_node = Node(data=local_data, quad=quad, depth=depth, leaf=True)
-            self.leaf_nodes.append( leaf_node )
-            return leaf_node
+
 
         # d axis ranges inside branch domain
         x_edge = range(quad[0][0], quad[0][1]+1)
@@ -293,7 +296,16 @@ class Tree:
             if entropy > max_entropy:
                 max_entropy = entropy
                 opt_ind, opt_axis = (ind, axis)
-   
+            
+
+        print(depth, max_entropy)
+        # Stop Condition
+        #if depth == 4:
+        if max_entropy < 2.:
+            leaf_node = Node(data=local_data, quad=quad, depth=depth, leaf=True)
+            self.leaf_nodes.append( leaf_node )
+            return leaf_node
+
 
         # Split node's quad
         node = Node(data=local_data, quad=quad, depth=depth)
@@ -328,20 +340,47 @@ class Tree:
 
 
 
+
+
+    def extract_domain_splits(self, node):
+
+        dic = {}
+        count = 0
+        dic[count] = [node]
+        
+        while not all([n.left is None for n in dic[count]]): 
+
+            nodes = dic[count]
+            count += 1
+            dic[count] = []
+
+            for k, n in enumerate(nodes):
+                if n.left:
+                    
+                    dic[count].append( n.left )
+                    dic[count].append( n.right )
+
+                else:
+                    dic[count].append( n )
+        return dic
+
+
+
     def check_progress(self):
         path = os.getcwd() + '/evol/'
         mkdir_p(path)
 
 
+        #exit()
         
-        for d in np.arange(len(self.tree_nodes)):
+        for d in np.arange(len(self.tree_nodes_domain)):
 
-            nodes = self.tree_nodes[d]
+            nodes = self.tree_nodes_domain[d]
             fig = plt.figure(figsize=(10,10))
             ax = fig.add_subplot(111)
             for n in nodes:
 
-                n.check_norm(self.grid.axis)
+                #n.check_norm(self.grid.axis)
                 [[i1, i2], [j1, j2]] = n.quad
                 x1, x2 = self.grid.axis[0][i1], self.grid.axis[0][i2]
                 y1, y2 = self.grid.axis[1][j1], self.grid.axis[1][j2]                
@@ -359,9 +398,9 @@ class Tree:
     def check_results(self, fname='data.png'):
         node = self.build_tree()
 
-        self.tree_nodes = self.extract_levels(node)
+        self.tree_nodes_depth = self.extract_levels(node)
 
-        print(self.tree_nodes)
+        print(self.tree_nodes_depth)
 
 
         exit()
