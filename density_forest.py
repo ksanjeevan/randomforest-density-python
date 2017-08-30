@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 
-
 from df_help import *
 
 from grid import Grid
@@ -77,12 +76,13 @@ class DensityForest:
 
 if __name__ == "__main__":
     '''
-    data = np.random.multivariate_normal([0,0], [[8,0],[0,8]], 100)
-    data2 = np.random.multivariate_normal([15,0], [[2,0],[0,2]], 100)
-    data3 = np.random.multivariate_normal([0,15], [[2,0],[0,2]], 100)
-    data4 = np.random.multivariate_normal([20,20], [[10,0],[0,10]], 100)
-    data5 = np.random.multivariate_normal([30,30], [[8,0],[0,8]], 100)
-    data6 = np.random.multivariate_normal([40,0], [[5,0],[0,5]], 300)
+    g = np.random.multivariate_normal
+    data = g([0,0], [[8,0],[0,8]], 100)
+    data2 = g([15,0], [[2,0],[0,2]], 100)
+    data3 = g([0,15], [[2,0],[0,2]], 100)
+    data4 = g([20,20], [[10,0],[0,10]], 100)
+    data5 = g([30,30], [[8,0],[0,8]], 100)
+    data6 = g([40,0], [[5,0],[0,5]], 300)
 
     data = np.array(list(data)+list(data2)+list(data3)+list(data4)+list(data5)+list(data6))
     np.save('data.npy', data)
