@@ -21,7 +21,8 @@ class Tree:
         self.entropy_gain_evol = []
         
         self.explore_depth = depth if depth else 0
-        
+
+
         node = self.build_tree()
 
         self.tree_nodes_depth = self.extract_levels(node)
@@ -62,33 +63,16 @@ class Tree:
         return root_node
 
 
-    def split_node(self, quad, depth):
-        """
-        Recursively split nodes until stop condition is reached
-        """
-        def get_quad(old_quad, axis, opt_ind):
-            """
-            quad: Return 2*d - indexes that delimit branch domain.
-            Splits branch domain based on optimal index and axis of application.
-            """
-            opt_quad_left = old_quad.copy()
-            opt_quad_right = old_quad.copy()
 
-            opt_quad_left[axis] = [old_quad[axis][0], opt_ind]
-            opt_quad_right[axis] = [opt_ind, old_quad[axis][1]]
-
-            return opt_quad_left, opt_quad_right
-        
-
-        # Compute 2*d masks to get data inside branch domain
+    def _get_local_data(self, quad):
         right = self.forest_obj.data[:,0] >= self.forest_obj.grid[0][quad[0][0]]
         left = self.forest_obj.data[:,0] < self.forest_obj.grid[0][quad[0][1]]
         top = self.forest_obj.data[:,1] >= self.forest_obj.grid[1][quad[1][0]]
         bottom = self.forest_obj.data[:,1] < self.forest_obj.grid[1][quad[1][1]]
 
-        local_data = self.forest_obj.data[(right)&(left)&(top)&(bottom)]
+        return self.forest_obj.data[(right)&(left)&(top)&(bottom)]
 
-
+    def _get_search_space(self, quad):
         # d axis ranges inside branch domain
         x_edge = range(quad[0][0], quad[0][1]+1)
         y_edge = range(quad[1][0], quad[1][1]+1)
@@ -96,14 +80,13 @@ class Tree:
         # Apply randomness rho factor to limit parameter space search
         edge = np.array([(z, 0) for z in x_edge] + [(z, 1) for z in y_edge])
         size = len(edge)
-        ind_array = edge[np.random.choice(size, size=int(size*self.forest_obj.rho), replace=False)]
-            
+        return edge[np.random.choice(size, size=int(size*self.forest_obj.rho), replace=False)]
 
-        # Find split with maxiumum entropy gain
+
+    def _find_opt_cut(self, ind_array):
         max_entropy = 0
         opt_ind = -1
 
-        
         for ind, axis in ind_array:
 
             entropy, left_size, right_size = self.entropy_gain(local_data, ind, axis)
@@ -111,13 +94,43 @@ class Tree:
             if entropy > max_entropy and left_size > 2 and right_size > 2:
                 max_entropy = entropy
                 opt_ind, opt_axis = (ind, axis)
-            
 
-        tune_threshold_cond = (depth == self.explore_depth) or (opt_ind == -1)
+        return max_entropy, opt_ind, opt_axis
+
+    def _get_new_quad(self, old_quad, axis, opt_ind):
+        """
+        quad: Return 2*d - indexes that delimit branch domain.
+        Splits branch domain based on optimal index and axis of application.
+        """
+        opt_quad_left = old_quad.copy()
+        opt_quad_right = old_quad.copy()
+
+        opt_quad_left[axis] = [old_quad[axis][0], opt_ind]
+        opt_quad_right[axis] = [opt_ind, old_quad[axis][1]]
+
+        return opt_quad_left, opt_quad_right
+
+
+    def split_node(self, quad, depth):
+        """
+        Recursively split nodes until stop condition is reached
+        """
+
+        # Restrict data to in branch domain
+        local_data = self._get_local_data(quad)
+
+        # Restrict search space for optimal cut
+        ind_array = self._get_search_space(quad)
+            
+        # Find split with maxiumum entropy gain
+        
+        max_entropy, opt_ind, opt_axis = self._find_opt_cut(ind_array)
+
+        tune_threshold_cond = depth == self.explore_depth
         stop_condition = tune_threshold_cond if self.explore_depth else (self.forest_obj.opt_entropy > max_entropy)
         
         # Stop Condition
-        if stop_condition:
+        if stop_condition or opt_ind == -1:
             leaf_node = Node(data=local_data, quad=quad, depth=depth, leaf=True)
             self.leaf_nodes.append( leaf_node )
             return leaf_node
@@ -127,7 +140,7 @@ class Tree:
 
         # Split node's quad
         node = Node(data=local_data, quad=quad, depth=depth)
-        opt_quad_left, opt_quad_right = get_quad(quad, opt_axis, opt_ind)
+        opt_quad_left, opt_quad_right = self._get_new_quad(quad, opt_axis, opt_ind)
         
         node.left = self.split_node(quad=opt_quad_left, depth=depth+1)
         node.right = self.split_node(quad=opt_quad_right, depth=depth+1)
