@@ -6,22 +6,31 @@ class Node:
     Class for each of the nodes in a decision tree.
     """
 
-    def __init__(self, data, quad, depth, leaf=False):
+    def __init__(self, quad, depth, leaf=False):
+        
+        self.go_right = None
         self.leaf = leaf
-        self.data = data
         self.quad = quad
         self.depth = depth
 
         self.left = None
         self.right = None
 
-        self.cov = np.cov(data, rowvar=False)
-        # Check cov positive semidef
-        #print(np.all(np.linalg.eigvals(np.cov(self.data, rowvar=False)) > 0))
 
-        self.sqrt_cov = np.sqrt(np.linalg.det(self.cov))
-        self.inv_cov = np.linalg.inv(self.cov)
-        self.mu = np.mean(data, axis=0)
+
+        if leaf:
+            self.cov = np.cov(data, rowvar=False)
+            # Check cov positive semidef
+            #print(np.all(np.linalg.eigvals(np.cov(self.data, rowvar=False)) > 0))
+            self.sqrt_cov = np.sqrt(np.linalg.det(self.cov))
+            self.inv_cov = np.linalg.inv(self.cov)
+            self.mu = np.mean(data, axis=0)
+
+        
+
+
+    def add_split(self, value, axis):
+        return lambda x: x[axis] > value
 
 
     def leaf_output(self, x):

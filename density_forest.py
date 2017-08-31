@@ -11,6 +11,13 @@ from tree import Tree
 
 
 
+def gauss_entropy_func(S):
+    """
+    Gaussian differential entropy (ignoring constant terms since 
+    we're interested in the delta).
+    """
+    return np.log(np.linalg.det(np.cov(S, rowvar=False)))
+
 
 class DensityForest:
     """
@@ -18,8 +25,11 @@ class DensityForest:
     train forest of trees with randomness rho.
     """
 
-    def __init__(self, data):
+    def __init__(self, data, f_size):
         self.data = data
+        self.f_size = f_size
+
+        self.entropy_func = gauss_entropy_func
 
         self.grid_obj = Grid(data, 100)
 
@@ -28,16 +38,36 @@ class DensityForest:
         self.rho = .5
 
         self.opt_entropy = self.tune_entropy_threshold(plot_debug=True)
-        self.build_forest()
+        self.forest = self.build_forest()
+
+
+
+
+    # Normalization
+    # Prediction
+
 
 
 
     def build_forest(self):
 
-        var = Tree(self)
+        forest = {}
+
+        for t in range(self.f_size):
+            forest[t] = Tree(self)
+            forest[t].tree_plot_leafs(fname='tree_opt%s.png'%t)
+
+            print([x.leaf for x in forest[t].tree_nodes_domain[max(forest[t].tree_nodes_domain)]])
+            print([x.leaf for x in forest[t].leaf_nodes])
+
+
+
+
         
-        var.tree_plot_leafs(fname='tree_opt.png')
-        
+        return forest
+
+
+
 
     # Implement Online L-curve optimization like EWMA to get rid of input depth
     def tune_entropy_threshold(self, n=10, depth=4, plot_debug=False):
@@ -92,7 +122,7 @@ if __name__ == "__main__":
     data = np.load('data.npy')
 
     
-    foo = DensityForest(data)
+    foo = DensityForest(data, f_size=1)
 
 
 

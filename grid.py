@@ -29,3 +29,23 @@ class Grid(object):
 
         return grid_range, axis
 
+
+
+
+class PDFComp:
+
+    def __init__(self, obj1, obj2, grid_obj):
+        
+        pass
+
+
+
+
+
+
+
+
+
+
+
+

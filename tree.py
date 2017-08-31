@@ -8,6 +8,9 @@ import os
 from df_help import *
 from node import Node
 
+
+
+
 class Tree:
     """
     Class for training and building decision trees.
@@ -28,12 +31,26 @@ class Tree:
         self.tree_nodes_depth = self.extract_levels(node)
         self.tree_nodes_domain = self.extract_domain_splits(node)
 
+
+    def output(self, x):
+        current_node = self.root_node
         
+        while not current_node.leaf:
+            if current_node.go_right(x):
+                current_node = current_node.right
+            else:
+                current_node = current_node.left
+
+        return current_node.leaf_output(x)
+
+
+
     def _compute_det_lamb(self, S):
 
         if S.shape[0] > 2:
-            return np.log(np.linalg.det(np.cov(S, rowvar=False)))
+            return self.forest_obj.entropy_func(S)
         return 1e5
+
 
     def entropy_gain(self, S, ind, axis):
         """
@@ -83,9 +100,10 @@ class Tree:
         return edge[np.random.choice(size, size=int(size*self.forest_obj.rho), replace=False)]
 
 
-    def _find_opt_cut(self, ind_array):
+    def _find_opt_cut(self, ind_array, local_data):
         max_entropy = 0
         opt_ind = -1
+        opt_axis = -1
 
         for ind, axis in ind_array:
 
@@ -124,14 +142,14 @@ class Tree:
             
         # Find split with maxiumum entropy gain
         
-        max_entropy, opt_ind, opt_axis = self._find_opt_cut(ind_array)
+        max_entropy, opt_ind, opt_axis = self._find_opt_cut(ind_array, local_data)
 
         tune_threshold_cond = depth == self.explore_depth
         stop_condition = tune_threshold_cond if self.explore_depth else (self.forest_obj.opt_entropy > max_entropy)
         
         # Stop Condition
         if stop_condition or opt_ind == -1:
-            leaf_node = Node(data=local_data, quad=quad, depth=depth, leaf=True)
+            leaf_node = Node(quad=quad, depth=depth, leaf=True)
             self.leaf_nodes.append( leaf_node )
             return leaf_node
 
@@ -139,7 +157,10 @@ class Tree:
         self.entropy_gain_evol.append( [depth, max_entropy] )
 
         # Split node's quad
-        node = Node(data=local_data, quad=quad, depth=depth)
+        node = Node(quad=quad, depth=depth)
+        node.go_right = node.add_split(self.forest_obj.grid[opt_axis][opt_ind], opt_axis)
+
+
         opt_quad_left, opt_quad_right = self._get_new_quad(quad, opt_axis, opt_ind)
         
         node.left = self.split_node(quad=opt_quad_left, depth=depth+1)
@@ -186,7 +207,6 @@ class Tree:
                     
                     dic[count].append( n.left )
                     dic[count].append( n.right )
-
                 else:
                     dic[count].append( n )
         return dic
