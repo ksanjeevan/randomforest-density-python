@@ -6,16 +6,16 @@ class Node:
     Class for each of the nodes in a decision tree.
     """
 
-    def __init__(self, quad, depth, leaf=False):
+    def __init__(self, data, quad, depth, leaf=False):
         
         self.go_right = None
         self.leaf = leaf
         self.quad = quad
         self.depth = depth
+        self.pi_l = len(data)
 
         self.left = None
         self.right = None
-
 
 
         if leaf:

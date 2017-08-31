@@ -26,10 +26,10 @@ class Tree:
         self.explore_depth = depth if depth else 0
 
 
-        node = self.build_tree()
+        self.root_node = self.build_tree()
 
-        self.tree_nodes_depth = self.extract_levels(node)
-        self.tree_nodes_domain = self.extract_domain_splits(node)
+        self.tree_nodes_depth = self.extract_levels(self.root_node)
+        self.tree_nodes_domain = self.extract_domain_splits(self.root_node)
 
 
     def output(self, x):
@@ -149,7 +149,7 @@ class Tree:
         
         # Stop Condition
         if stop_condition or opt_ind == -1:
-            leaf_node = Node(quad=quad, depth=depth, leaf=True)
+            leaf_node = Node(data=local_data, quad=quad, depth=depth, leaf=True)
             self.leaf_nodes.append( leaf_node )
             return leaf_node
 
@@ -157,7 +157,7 @@ class Tree:
         self.entropy_gain_evol.append( [depth, max_entropy] )
 
         # Split node's quad
-        node = Node(quad=quad, depth=depth)
+        node = Node(data=local_data, quad=quad, depth=depth)
         node.go_right = node.add_split(self.forest_obj.grid[opt_axis][opt_ind], opt_axis)
 
 
@@ -236,7 +236,7 @@ class Tree:
 
 
 
-    def tree_plot_leafs(self, fname='data.png'):
+    def tree_leaf_plots(self, fname='data.png'):
 
         path = os.getcwd() + '/plots/'
         mkdir_p(path)

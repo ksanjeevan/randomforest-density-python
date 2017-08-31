@@ -41,12 +41,8 @@ class DensityForest:
         self.forest = self.build_forest()
 
 
-
-
     # Normalization
     # Prediction
-
-
 
 
     def build_forest(self):
@@ -55,17 +51,12 @@ class DensityForest:
 
         for t in range(self.f_size):
             forest[t] = Tree(self)
-            forest[t].tree_plot_leafs(fname='tree_opt%s.png'%t)
+            forest[t].tree_leaf_plots(fname='tree_opt%s.png'%t)
 
-            print([x.leaf for x in forest[t].tree_nodes_domain[max(forest[t].tree_nodes_domain)]])
-            print([x.leaf for x in forest[t].leaf_nodes])
-
-
-
-
+            #print([x.leaf for x in forest[t].tree_nodes_domain[max(forest[t].tree_nodes_domain)]])
+            #print([x.leaf for x in forest[t].leaf_nodes])
         
         return forest
-
 
 
 
@@ -85,21 +76,16 @@ class DensityForest:
         entropy_evol = entropy_evol.groupby(['tree', 'depth'])[['entropy']].mean().reset_index().pivot(columns='tree', index='depth', values='entropy').fillna(0)
         entropy_elbow_cand = entropy_evol.apply(lambda x: opt_L_curve(np.array(x.index), np.array(x)))
         
+        avg_opt_entropy = entropy_elbow_cand.mean()
         if plot_debug:
             
             fig = plt.figure(figsize=(10,10))
             ax = fig.add_subplot(111)
-            entropy_evol.plot(ax=ax, kind='line', alpha=.6, lw=3.)
+            entropy_evol.plot(ax=ax, kind='line', alpha=.6, lw=3., title='Avg. Opt. Entropy = %.2f'%avg_opt_entropy)
             plt.savefig('evol.png', format='png')
             plt.close()
 
-        return entropy_elbow_cand.mean()
-
-
-
-
-
-
+        return avg_opt_entropy
 
 
 
@@ -118,11 +104,11 @@ if __name__ == "__main__":
     np.save('data.npy', data)
     '''
     
-
     data = np.load('data.npy')
 
-    
     foo = DensityForest(data, f_size=1)
+
+    print(foo.forest[0].output([0, 40]))
 
 
 
