@@ -8,7 +8,8 @@ From [Decision Forests for Classification,
 Regression, Density Estimation, Manifold
 Learning and Semi-Supervised Learning](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/decisionForests_MSR_TR_2011_114.pdf):
 
-####To do
+### To do
+
 
 1) Make sure _output_ function is working correctly.
 
@@ -20,7 +21,7 @@ Learning and Semi-Supervised Learning](https://www.microsoft.com/en-us/research/
 
 5) Write an exhaustive documentation!
 
-####Extras
+#### Extras
 
 * Try other entropy gain functions / compactness measures.
 * Use online L-curve method for entropy threshold optimization.
