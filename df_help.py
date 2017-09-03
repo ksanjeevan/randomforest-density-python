@@ -1,6 +1,10 @@
 
 import os, errno
 import numpy as np
+import matplotlib.pyplot as plt
+from pylab import *
+
+from grid import Grid
 
 def mkdir_p(path):
     """
@@ -72,3 +76,176 @@ def opt_L_curve(xs, ys):
         result.append( [np.sqrt((xp-x_star)**2 + (yp-y_star)**2), xp, yp] )
 
     return max(result, key=lambda x: x[0])[2]
+
+
+
+
+
+
+
+
+
+import abc
+
+class TestData(abc.ABC):
+
+    """
+    Abstract Data and Distribution test
+    """
+
+    def __init__(self):
+        self.dist = []
+
+    @abc.abstractmethod
+    def generate_data(self, fname=''):
+        pass
+
+    @abc.abstractmethod
+    def check_norm(self, plot_name):
+        pass
+
+    @abc.abstractmethod
+    def compute_distribution(self, plot_name):
+        pass
+
+
+    @abc.abstractmethod
+    def evaluate(self, plot_name):
+        pass
+
+
+class TestDataGauss(TestData):
+
+    def __init__(self):
+
+        self.mu = [[0, 0], [0, 55], [20, 15], [45, 20]]
+        self.cov = [[[2, 0], [0, 80]], [[90, 0], [0, 5]], [[4, 0], [0, 4]], [[40, 0], [0, 40]]]
+        self.n = [100, 100, 100, 100]
+        self.Z = [N/np.sum(self.n) for N in self.n]
+
+        self.data = self.generate_data()
+        self.grid_obj = Grid(self.data, 100)
+        self.grid = self.grid_obj.axis
+
+        self.dist = self.compute_distribution()
+
+
+        
+    def check_norm(self):
+        dist_vals = []
+
+        deltas = []
+
+        for v in self.grid:
+            deltas.append( v[1]-v[0] )
+
+        for i, x in enumerate(self.grid[0]):
+            dist_vals.append([])
+            for j, y in enumerate(self.grid[1]):
+                dist_vals[i].append(self.evaluate(np.array([x, y])))
+
+        integral = integrate_2d(deltas=deltas, func=dist_vals)
+
+        return integral
+
+
+
+
+    def compute_distribution(self):
+        dist = []
+        for j, y in enumerate(self.grid[1]):
+            dist.append([])
+            for i, x in enumerate(self.grid[0]):    
+                dist[j].append(self.evaluate(np.array([x, y])))
+        return dist
+
+
+
+    def evaluate(self, x):
+        suma = 0
+        for i, args in enumerate(zip(self.mu, self.cov)):
+            mu, cov = args
+            gauss_arg = np.inner(np.transpose((x-mu)), np.inner(np.linalg.inv(cov), (x-mu)))
+            suma += self.Z[i]*(np.exp(-.5*gauss_arg))/(2*np.pi*np.sqrt(np.linalg.det(cov)))
+        return suma
+
+
+    def generate_data(self, fname='data.npy'):
+
+        if os.path.isfile(fname):
+            return np.load(fname)
+        else:
+            g = np.random.multivariate_normal
+            data = []
+
+            for mu, cov, n in zip(self.mu, self.cov, self.n):
+                data += list(g(mu, cov, n))
+
+            data = np.array(data)
+
+            np.save(fname, data)
+
+            return data
+
+
+
+
+class CompareDistributions:
+
+    def __init__(self, original, estimate):
+        self.P = np.array(original.dist)
+        self.Q = np.array(estimate.dist)
+        self.grid = original.grid
+        self.data = original.data
+
+        self.vizualize_both()
+
+    def compute_JSD(self):
+
+        if self.P.shape == self.Q.shape:
+            suma = 0
+
+            for i in range(len(self.P)):
+                for j in range(len(self.P[0])):
+                    suma += self.P[i][j]*np.log(2.*self.P[i][j]/(self.P[i][j] + self.Q[i][j]))
+
+            for i in range(len(self.P)):
+                for j in range(len(self.P[0])):
+                    suma += self.Q[i][j]*np.log(2.*self.Q[i][j]/(self.P[i][j] + self.Q[i][j]))
+            return suma
+
+
+
+    def vizualize_both(self):
+        X = self.grid[0]
+        Y = self.grid[1]
+        Z1 = self.P
+        Z2 = self.Q
+
+        fig = plt.figure(figsize=(12, 12))
+
+        true_dist_params = (211, Z1, 'True Distribution', cm.Greens)
+        rf_dist_params = (212, Z2, 'Density Forest Estimate', cm.Blues)
+
+        for sp, Z, title, cmap in [true_dist_params, rf_dist_params]:
+            ax = fig.add_subplot(sp)
+            vmin=np.min(Z1)
+            vmax=np.max(Z1)
+            var = plt.pcolormesh(np.array(X),np.array(Y),np.array(Z1), cmap=cmap, vmin=vmin, vmax=vmax)
+            plt.colorbar(var, ticks=np.arange(vmin, vmax, (vmax-vmin)/8))
+            ax = plt.gca()
+            gris = 200.0
+            ax.set_facecolor((gris/255, gris/255, gris/255))
+            ax.set_title(title)
+            plt.xlim(np.min(X), np.max(X))
+            plt.ylim(np.min(Y), np.max(Y))
+            plt.grid()
+
+
+        plt.suptitle('JSD = %.3f'%(self.compute_JSD()))
+        fig.savefig('density_comp.png', format='png')
+        plt.close()
+
+
+
+

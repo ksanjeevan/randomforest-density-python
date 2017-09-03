@@ -1,5 +1,6 @@
 
 import numpy as np
+from df_help import *
 
 class Node:
     """
@@ -12,7 +13,7 @@ class Node:
         self.leaf = leaf
         self.quad = quad
         self.depth = depth
-        self.pi_l = len(data)
+        self.s_l = len(data)
 
         self.left = None
         self.right = None
@@ -67,3 +68,5 @@ class Node:
 
         if not (integral > 0.95 and integral < 1.05):
             print('Node of depth %s, norm = %s'%(self.depth, integral))
+
+        return integral

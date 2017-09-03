@@ -8,18 +8,7 @@ From [Decision Forests for Classification,
 Regression, Density Estimation, Manifold
 Learning and Semi-Supervised Learning](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/decisionForests_MSR_TR_2011_114.pdf):
 
-### To do
 
-
-1) Make sure _output_ function is working correctly.
-
-2) Find numeric approximation for the cumulative multivariate normal distribution function in order to compute Z<sub>t</sub> (avoid numeric deltas integration if possible).
-
-3) Forest voting and global normalization check.
-
-4) Test case comparison: build JSD computation.
-
-5) Write an exhaustive documentation!
 
 #### Extras
 
@@ -35,8 +24,19 @@ Learning and Semi-Supervised Learning](https://www.microsoft.com/en-us/research/
 
 
 <p align="center">
-<img src="evol.png" width="400px"/>
+<img src="result_plots/lcurve.gif" width="500px"/>
+</p>
+
+<p align="center">
+<img src="result_plots/density_estimation.png" width="400px"/>
 </p>
 
 
+<p align="center">
+<img src="result_plots/density_comp.png" width="400px"/>
+</p>
+
+<p align="center">
+<img src="result_plots/evol.png" width="400px"/>
+</p>
 

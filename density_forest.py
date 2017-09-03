@@ -9,6 +9,8 @@ from df_help import *
 from grid import Grid
 from tree import Tree
 
+from pylab import *
+
 
 
 def gauss_entropy_func(S):
@@ -25,24 +27,82 @@ class DensityForest:
     train forest of trees with randomness rho.
     """
 
-    def __init__(self, data, f_size):
+    def __init__(self, data, grid_obj, f_size, rho=1.):
         self.data = data
         self.f_size = f_size
 
         self.entropy_func = gauss_entropy_func
 
-        self.grid_obj = Grid(data, 100)
+        self.grid_obj = grid_obj
 
         self.grid = self.grid_obj.axis
         
-        self.rho = .5
+        self.rho = rho
 
         self.opt_entropy = self.tune_entropy_threshold(plot_debug=True)
+
         self.forest = self.build_forest()
+        self.dist = self.compute_density()
+
+        self.plot_density()
 
 
-    # Normalization
-    # Prediction
+
+    def compute_density(self):
+
+        dist = []
+        for j, y in enumerate(self.grid[1]):
+            dist.append([])
+            for i, x in enumerate(self.grid[0]):    
+                dist[j].append(self.forest_output(np.array([x, y])))
+        return dist
+        
+
+    
+    def plot_density(self):
+
+        X = self.grid[0]
+        Y = self.grid[1]
+        Z = self.dist
+
+        fig = plt.figure(figsize=(12, 12))
+        ax = fig.add_subplot(111)
+
+
+        vmin=np.min(Z)
+        vmax=np.max(Z)
+        var = plt.pcolormesh(np.array(X),np.array(Y),np.array(Z), cmap=cm.Blues, vmin=vmin, vmax=vmax)
+        plt.colorbar(var, ticks=np.arange(vmin, vmax, (vmax-vmin)/8))
+
+        ax = plt.gca()
+
+        gris = 200.0
+        ax.set_facecolor((gris/255, gris/255, gris/255))
+
+        ax.scatter(*zip(*self.data), alpha=.5, c='k', s=10., lw=0)
+
+        plt.xlim(np.min(X), np.max(X))
+        plt.ylim(np.min(Y), np.max(Y))
+        plt.grid()
+
+        ax.set_title('rho = %s, |T| = %d, max_entropy = %.2f'%(self.rho, self.f_size, self.opt_entropy))
+
+        fig.savefig('density_estimation.png', format='png')
+        plt.close()
+
+
+
+
+
+
+    def forest_output(self, x):
+
+        result = []
+        for i, t in self.forest.items():
+            result.append( t.output(x) )
+
+        return np.mean(result)
+
 
 
     def build_forest(self):
@@ -50,18 +110,14 @@ class DensityForest:
         forest = {}
 
         for t in range(self.f_size):
-            forest[t] = Tree(self)
+            forest[t] = Tree(self, rho=self.rho)
             forest[t].tree_leaf_plots(fname='tree_opt%s.png'%t)
-
-            #print([x.leaf for x in forest[t].tree_nodes_domain[max(forest[t].tree_nodes_domain)]])
-            #print([x.leaf for x in forest[t].leaf_nodes])
         
         return forest
 
 
-
     # Implement Online L-curve optimization like EWMA to get rid of input depth
-    def tune_entropy_threshold(self, n=10, depth=4, plot_debug=False):
+    def tune_entropy_threshold(self, n=5, depth=6, plot_debug=False):
         """
         Compute mean optimal entropy based on L-curve elbow method.
         """
@@ -69,8 +125,10 @@ class DensityForest:
         e_arr = []
         for i in range(n):
             
-            var = Tree(self, depth=depth)
+            var = Tree(self, rho=.5, depth=depth)
             e_arr += [pair + [i] for pair in var.entropy_gain_evol]
+
+            var.domain_splits_plots(subpath='%s/'%i)
 
         entropy_evol = pd.DataFrame(e_arr, columns=['depth', 'entropy', 'tree'])
         entropy_evol = entropy_evol.groupby(['tree', 'depth'])[['entropy']].mean().reset_index().pivot(columns='tree', index='depth', values='entropy').fillna(0)
@@ -90,25 +148,36 @@ class DensityForest:
 
 
 
+
+
+
+
+
+
+
 if __name__ == "__main__":
     '''
-    g = np.random.multivariate_normal
-    data = g([0,0], [[8,0],[0,8]], 100)
-    data2 = g([15,0], [[2,0],[0,2]], 100)
-    data3 = g([0,15], [[2,0],[0,2]], 100)
-    data4 = g([20,20], [[10,0],[0,10]], 100)
-    data5 = g([30,30], [[8,0],[0,8]], 100)
-    data6 = g([40,0], [[5,0],[0,5]], 300)
+    
+    data = g(, 100)
+    data2 = g(, 100)
+    data3 = g(, 100)
+    data4 = g(, 100)
+    data5 = g(, 100)
+    data6 = g(, 300)
 
     data = np.array(list(data)+list(data2)+list(data3)+list(data4)+list(data5)+list(data6))
     np.save('data.npy', data)
     '''
+
+    var = TestDataGauss()
+    foo = DensityForest(var.data, grid_obj=var.grid_obj, f_size=5, rho=.5)
+
     
-    data = np.load('data.npy')
+    tri = CompareDistributions(original=var, estimate=foo)
+    
+    
 
-    foo = DensityForest(data, f_size=1)
-
-    print(foo.forest[0].output([0, 40]))
+    #print(foo.forest[0].output([0, 40]))
 
 
 

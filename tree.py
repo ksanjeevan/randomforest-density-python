@@ -16,20 +16,64 @@ class Tree:
     Class for training and building decision trees.
     """
 
-    def __init__(self, forest_obj, depth=None):
+    def __init__(self, forest_obj, rho, depth=None):
 
         self.forest_obj = forest_obj
+        self.rho = rho
+
+        self.s_0 = len(forest_obj.data)
 
         self.leaf_nodes = []
         self.entropy_gain_evol = []
         
         self.explore_depth = depth if depth else 0
 
-
         self.root_node = self.build_tree()
+
+        self.Zt = None
 
         self.tree_nodes_depth = self.extract_levels(self.root_node)
         self.tree_nodes_domain = self.extract_domain_splits(self.root_node)
+
+        if not depth:    
+
+            self.Zt = self.norm_tree()
+
+
+    def check_norm(self):
+
+        dist_vals = []
+
+        deltas = []
+
+        for v in self.forest_obj.grid:
+            deltas.append( v[1]-v[0] )
+
+        for i, x in enumerate(self.forest_obj.grid[0]):
+            dist_vals.append([])
+            for j, y in enumerate(self.forest_obj.grid[1]):
+                dist_vals[i].append(self.output(np.array([x, y])))
+
+        integral = integrate_2d(deltas=deltas, func=dist_vals)
+
+        return integral
+
+
+
+    def norm_tree(self):
+ 
+        Zt = 0
+
+        for l in self.leaf_nodes:
+
+            pi_l = l.s_l / self.s_0
+            integral = l.check_norm(self.forest_obj.grid)
+            Zt += pi_l * integral
+        
+        return Zt
+
+
+
 
 
     def output(self, x):
@@ -41,7 +85,9 @@ class Tree:
             else:
                 current_node = current_node.left
 
-        return current_node.leaf_output(x)
+
+        pi_l = current_node.s_l / self.s_0
+        return (pi_l/self.Zt)*current_node.leaf_output(x)
 
 
 
@@ -97,7 +143,7 @@ class Tree:
         # Apply randomness rho factor to limit parameter space search
         edge = np.array([(z, 0) for z in x_edge] + [(z, 1) for z in y_edge])
         size = len(edge)
-        return edge[np.random.choice(size, size=int(size*self.forest_obj.rho), replace=False)]
+        return edge[np.random.choice(size, size=int(size*self.rho), replace=False)]
 
 
     def _find_opt_cut(self, ind_array, local_data):
@@ -213,15 +259,25 @@ class Tree:
 
 
 
-    def domain_splits_plots(self):
-        path = os.getcwd() + '/evol/'
+    def domain_splits_plots(self, subpath=''):
+        path = os.getcwd() + '/evol/' + subpath
         mkdir_p(path)
         
         for d in np.arange(len(self.tree_nodes_domain)):
 
             nodes = self.tree_nodes_domain[d]
             fig = plt.figure(figsize=(10,10))
-            ax = fig.add_subplot(111)
+            evol = np.array(self.entropy_gain_evol)
+            ax0 = fig.add_subplot(211)
+            ax0.plot(*zip(*evol[:d]), alpha=.8, color='k', ls='-', lw=2.)
+            ax0.set_title('Entropy gain vs. Depth')
+
+            plt.xlim(np.min(evol[:,0]), np.max(evol[:,0]))
+            plt.ylim(np.min(evol[:,1]), np.max(evol[:,1]))
+
+            ax = fig.add_subplot(212)
+
+
             for n in nodes:
 
                 #n.check_norm(self.grid.axis)
@@ -234,7 +290,7 @@ class Tree:
             plt.savefig(path + 'branches_depth%s.png'%d, format='png')
             plt.close()
 
-
+        
 
     def tree_leaf_plots(self, fname='data.png'):
 
@@ -259,3 +315,8 @@ class Tree:
         plt.savefig(path + fname, format='png')
         plt.close()
         
+
+
+
+
+
