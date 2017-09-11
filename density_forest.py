@@ -8,6 +8,7 @@ from df_help import *
 
 from grid import Grid
 from tree import Tree
+from node import NodeGauss, NodeKDE
 
 from pylab import *
 
@@ -28,9 +29,11 @@ class DensityForest:
     """
 
     def __init__(self, data, grid_obj, f_size, rho=1.):
+        
         self.data = data
         self.f_size = f_size
 
+        self.node_class = NodeGauss
         self.entropy_func = gauss_entropy_func
 
         self.grid_obj = grid_obj
@@ -39,16 +42,25 @@ class DensityForest:
         
         self.rho = rho
 
+
+
+
+
+    def train(self):
+
         self.opt_entropy = self.tune_entropy_threshold(plot_debug=True)
-
         self.forest = self.build_forest()
+
+
+    def estimate(self):
+
         self.dist = self.compute_density()
-
-        self.plot_density()
-
+        return self.dist
 
 
     def compute_density(self):
+
+
 
         dist = []
         for j, y in enumerate(self.grid[1]):
@@ -58,8 +70,7 @@ class DensityForest:
         return dist
         
 
-    
-    def plot_density(self):
+    def plot_density(self, fname='density_estimation.png'):
 
         X = self.grid[0]
         Y = self.grid[1]
@@ -87,11 +98,8 @@ class DensityForest:
 
         ax.set_title('rho = %s, |T| = %d, max_entropy = %.2f'%(self.rho, self.f_size, self.opt_entropy))
 
-        fig.savefig('density_estimation.png', format='png')
+        fig.savefig(fname, format='png')
         plt.close()
-
-
-
 
 
 
@@ -113,6 +121,31 @@ class DensityForest:
             forest[t] = Tree(self, rho=self.rho)
             forest[t].tree_leaf_plots(fname='tree_opt%s.png'%t)
         
+
+        path = os.getcwd() + '/plots/'
+        mkdir_p(path)
+
+
+        fig = plt.figure(figsize=(10,10))
+        ax = fig.add_subplot(111)
+        
+
+        color = ['lightcoral', 'dodgerblue', 'mediumseagreen', 'darkorange']
+        for t in range(self.f_size):
+            for c, n in enumerate(forest[t].leaf_nodes):
+
+                [[i1, i2], [j1, j2]] = n.quad
+                x1, x2 = self.grid[0][i1], self.grid[0][i2]
+                y1, y2 = self.grid[1][j1], self.grid[1][j2]
+                
+                ax.fill_between([x1,x2], y1, y2, alpha=.15, color=color[c])
+ 
+        pd.DataFrame(self.data, columns=['x', 'y']).plot(ax=ax, x='x', y='y', kind='scatter', lw=0, alpha=.6, s=20, c='k')
+        plt.savefig(path + 'combined.png', format='png')
+        plt.close()
+
+
+
         return forest
 
 
@@ -149,33 +182,56 @@ class DensityForest:
 
 
 
-
-
-
-
-
-
 if __name__ == "__main__":
     '''
-    
-    data = g(, 100)
-    data2 = g(, 100)
-    data3 = g(, 100)
-    data4 = g(, 100)
-    data5 = g(, 100)
-    data6 = g(, 300)
 
-    data = np.array(list(data)+list(data2)+list(data3)+list(data4)+list(data5)+list(data6))
-    np.save('data.npy', data)
+    params = {
+            'mu' : [[0, 0], [0, 55], [20, 15], [45, 20]],
+            'cov': [[[2, 0], [0, 80]], [[90, 0], [0, 5]], [[4, 0], [0, 4]], [[40, 0], [0, 40]]],
+            'n':[100, 100, 100, 100]}
+
+
+
+    var = TestDataGauss(params=params, fname='data.npy')
     '''
 
-    var = TestDataGauss()
-    foo = DensityForest(var.data, grid_obj=var.grid_obj, f_size=5, rho=.5)
+    
+    params = {
+            'mu' : [[0, 0], [0, 20], [50, 40], [10, -20], [20,5]],
+            'cov': [[[1, 0], [0, 150]], [[90, 0], [0, 5]], [[4, 1], [1, 4]], [[40, 5], [5, 40]], [[90, 15], [15, 16]]],
+            'n':[700, 20, 200, 400, 300]}
 
-    
+
+
+    var = TestDataGauss(params=params, fname='data_new.npy', replace=False)
+    var.check_plot()
+
+    '''
+    foo = DensityForest(var.data, grid_obj=var.grid_obj, f_size=5, rho=.5)
+    foo.train()
+    foo.estimate()
+    foo.plot_density()
+
+
     tri = CompareDistributions(original=var, estimate=foo)
-    
-    
+    tri.vizualize_both('density_comp.png')
+    '''
+
+    print('Starting...')
+    foo2 = DensityForest(var.data, grid_obj=var.grid_obj, f_size=5, rho=.5)
+    foo2.node_class = NodeKDE
+
+    print('Training...')
+    foo2.train()
+    print('Estimating...')
+    foo2.estimate()
+    print('Plotting...')
+    foo2.plot_density(fname='density_estimation_kde.png')
+
+    print('Comparing...')
+
+    tri = CompareDistributions(original=var, estimate=foo2)
+    tri.vizualize_both('density_comp_kde.png', show_data=False)
 
     #print(foo.forest[0].output([0, 40]))
 

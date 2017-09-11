@@ -114,23 +114,28 @@ class TestData(abc.ABC):
         pass
 
 
+
+
+
+
 class TestDataGauss(TestData):
 
-    def __init__(self):
+    def __init__(self, params, fname, replace=False):
 
-        self.mu = [[0, 0], [0, 55], [20, 15], [45, 20]]
-        self.cov = [[[2, 0], [0, 80]], [[90, 0], [0, 5]], [[4, 0], [0, 4]], [[40, 0], [0, 40]]]
-        self.n = [100, 100, 100, 100]
+        self.replace = replace
+        self.mu = params['mu']
+        self.cov = params['cov']
+        self.n = params['n']
         self.Z = [N/np.sum(self.n) for N in self.n]
 
-        self.data = self.generate_data()
+        self.data = self.generate_data(fname=fname)
         self.grid_obj = Grid(self.data, 100)
         self.grid = self.grid_obj.axis
+        
 
         self.dist = self.compute_distribution()
 
-
-        
+     
     def check_norm(self):
         dist_vals = []
 
@@ -149,8 +154,6 @@ class TestDataGauss(TestData):
         return integral
 
 
-
-
     def compute_distribution(self):
         dist = []
         for j, y in enumerate(self.grid[1]):
@@ -158,8 +161,6 @@ class TestDataGauss(TestData):
             for i, x in enumerate(self.grid[0]):    
                 dist[j].append(self.evaluate(np.array([x, y])))
         return dist
-
-
 
     def evaluate(self, x):
         suma = 0
@@ -172,7 +173,7 @@ class TestDataGauss(TestData):
 
     def generate_data(self, fname='data.npy'):
 
-        if os.path.isfile(fname):
+        if os.path.isfile(fname) and not self.replace:
             return np.load(fname)
         else:
             g = np.random.multivariate_normal
@@ -188,6 +189,31 @@ class TestDataGauss(TestData):
             return data
 
 
+    def check_plot(self):
+
+        X = self.grid[0]
+        Y = self.grid[1]
+        Z = self.dist
+        
+        fig = plt.figure(figsize=(12, 12))
+        ax = fig.add_subplot(111)
+   
+        vmin = np.min(Z)
+        vmax = np.max(Z)
+        var = plt.pcolormesh(np.array(X),np.array(Y),np.array(Z), cmap=cm.Greens, vmin=vmin, vmax=vmax)
+        plt.colorbar(var, ticks=np.arange(vmin, vmax, (vmax-vmin)/8))
+        ax = plt.gca()
+        gris = 200.0
+        ax.set_facecolor((gris/255, gris/255, gris/255))
+        
+        ax.scatter(*zip(*self.data), alpha=.5, c='k', s=10., lw=0)
+
+        plt.xlim(np.min(X), np.max(X))
+        plt.ylim(np.min(Y), np.max(Y))
+        plt.grid()
+        fig.savefig('true_dist_check.png', format='png')
+        plt.close()
+
 
 
 class CompareDistributions:
@@ -198,25 +224,29 @@ class CompareDistributions:
         self.grid = original.grid
         self.data = original.data
 
-        self.vizualize_both()
 
     def compute_JSD(self):
 
         if self.P.shape == self.Q.shape:
             suma = 0
 
+            import math
+        
             for i in range(len(self.P)):
-                for j in range(len(self.P[0])):
-                    suma += self.P[i][j]*np.log(2.*self.P[i][j]/(self.P[i][j] + self.Q[i][j]))
+                for j in range(len(self.P[0])):    
+                    if self.P[i][j] > 0:
+                        suma += self.P[i][j]*np.log(2.*self.P[i][j]/(self.P[i][j] + self.Q[i][j]))
+                    
+            for i in range(len(self.Q)):
+                for j in range(len(self.Q[0])):
+                    if self.Q[i][j] > 0:
+                        suma += self.Q[i][j]*np.log(2.*self.Q[i][j]/(self.P[i][j] + self.Q[i][j]))
 
-            for i in range(len(self.P)):
-                for j in range(len(self.P[0])):
-                    suma += self.Q[i][j]*np.log(2.*self.Q[i][j]/(self.P[i][j] + self.Q[i][j]))
             return suma
 
 
 
-    def vizualize_both(self):
+    def vizualize_both(self, fname='density_comp.png', show_data=False):
         X = self.grid[0]
         Y = self.grid[1]
         Z1 = self.P
@@ -225,25 +255,28 @@ class CompareDistributions:
         fig = plt.figure(figsize=(12, 12))
 
         true_dist_params = (211, Z1, 'True Distribution', cm.Greens)
-        rf_dist_params = (212, Z2, 'Density Forest Estimate', cm.Blues)
+        rf_dist_params = (212, Z2, 'Density Forest Estimate; JSD = %.3f'%(self.compute_JSD()), cm.Blues)
 
         for sp, Z, title, cmap in [true_dist_params, rf_dist_params]:
             ax = fig.add_subplot(sp)
             vmin=np.min(Z1)
             vmax=np.max(Z1)
-            var = plt.pcolormesh(np.array(X),np.array(Y),np.array(Z1), cmap=cmap, vmin=vmin, vmax=vmax)
+            var = plt.pcolormesh(np.array(X),np.array(Y),np.array(Z), cmap=cmap, vmin=vmin, vmax=vmax)
             plt.colorbar(var, ticks=np.arange(vmin, vmax, (vmax-vmin)/8))
             ax = plt.gca()
             gris = 200.0
             ax.set_facecolor((gris/255, gris/255, gris/255))
+            
+            if show_data:
+                ax.scatter(*zip(*self.data), alpha=.5, c='k', s=10., lw=0)
+            
             ax.set_title(title)
             plt.xlim(np.min(X), np.max(X))
             plt.ylim(np.min(Y), np.max(Y))
             plt.grid()
 
 
-        plt.suptitle('JSD = %.3f'%(self.compute_JSD()))
-        fig.savefig('density_comp.png', format='png')
+        fig.savefig(fname, format='png')
         plt.close()
 
 

@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import os
 
 from df_help import *
-from node import Node
+
 
 
 
@@ -21,6 +21,8 @@ class Tree:
         self.forest_obj = forest_obj
         self.rho = rho
 
+        self.node_class = forest_obj.node_class
+
         self.s_0 = len(forest_obj.data)
 
         self.leaf_nodes = []
@@ -34,6 +36,7 @@ class Tree:
 
         self.tree_nodes_depth = self.extract_levels(self.root_node)
         self.tree_nodes_domain = self.extract_domain_splits(self.root_node)
+
 
         if not depth:    
 
@@ -59,7 +62,6 @@ class Tree:
         return integral
 
 
-
     def norm_tree(self):
  
         Zt = 0
@@ -71,8 +73,6 @@ class Tree:
             Zt += pi_l * integral
         
         return Zt
-
-
 
 
 
@@ -123,6 +123,7 @@ class Tree:
     def build_tree(self):
         quad = [[0,len(self.forest_obj.grid[0])-1]]*2
         root_node = self.split_node(quad=quad, depth=0)
+
         return root_node
 
 
@@ -195,7 +196,8 @@ class Tree:
         
         # Stop Condition
         if stop_condition or opt_ind == -1:
-            leaf_node = Node(data=local_data, quad=quad, depth=depth, leaf=True)
+            leaf_node = self.node_class(data=local_data, quad=quad, depth=depth, leaf=True)
+            
             self.leaf_nodes.append( leaf_node )
             return leaf_node
 
@@ -203,7 +205,7 @@ class Tree:
         self.entropy_gain_evol.append( [depth, max_entropy] )
 
         # Split node's quad
-        node = Node(data=local_data, quad=quad, depth=depth)
+        node = self.node_class(data=local_data, quad=quad, depth=depth)
         node.go_right = node.add_split(self.forest_obj.grid[opt_axis][opt_ind], opt_axis)
 
 
@@ -262,16 +264,21 @@ class Tree:
     def domain_splits_plots(self, subpath=''):
         path = os.getcwd() + '/evol/' + subpath
         mkdir_p(path)
+
+
+        evol = pd.DataFrame(self.entropy_gain_evol).groupby(0)[1].mean()
+        evol = np.array(list(zip(evol.index, evol)))
+
         
         for d in np.arange(len(self.tree_nodes_domain)):
 
             nodes = self.tree_nodes_domain[d]
             fig = plt.figure(figsize=(10,10))
-            evol = np.array(self.entropy_gain_evol)
+            
             ax0 = fig.add_subplot(211)
+
             ax0.plot(*zip(*evol[:d]), alpha=.8, color='k', ls='-', lw=2.)
             ax0.set_title('Entropy gain vs. Depth')
-
             plt.xlim(np.min(evol[:,0]), np.max(evol[:,0]))
             plt.ylim(np.min(evol[:,1]), np.max(evol[:,1]))
 
@@ -285,6 +292,7 @@ class Tree:
                 x1, x2 = self.forest_obj.grid[0][i1], self.forest_obj.grid[0][i2]
                 y1, y2 = self.forest_obj.grid[1][j1], self.forest_obj.grid[1][j2]                
                 ax.fill_between([x1,x2], y1, y2, alpha=.7)
+
 
             pd.DataFrame(self.forest_obj.data, columns=['x', 'y']).plot(ax=ax, x='x', y='y', kind='scatter', lw=0, alpha=.6, s=20, c='k')
             plt.savefig(path + 'branches_depth%s.png'%d, format='png')
