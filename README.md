@@ -39,7 +39,7 @@ _A key aspect of decision forests is the fact that its component trees are all r
 * _[Randomized node optimization](https://en.wikipedia.org/wiki/Random_subspace_method)_
 _These two techniques are not mutually exclusive and could be used together._
 
-The method is tested by sampling a combination of gaussians. In order to introduce randomness the node optimization is randomized by parameter _rho_, which is proportional to the available parameter search space at each node split. With a 50% _rho_ and 5 trees, we the firsts results below:
+The method is tested by sampling a combination of gaussians. In order to introduce randomness the node optimization is randomized by parameter _rho_, which is proportional to the available parameter search space at each node split. With a 50% _rho_ and 5 trees, we see the firsts results below:
 
 
 <p align="center">
