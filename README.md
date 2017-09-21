@@ -77,6 +77,6 @@ Although it produces an overall much better JSD, it's worth noting that the top 
 * Use online L-curve method for entropy threshold optimization.
 * Other bottlenecks.
 * Refactor to reuse framework in classification and regression.
-
+* Fit unknown distributions / performance.
 
 
