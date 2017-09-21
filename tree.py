@@ -1,5 +1,4 @@
 
-
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -98,7 +97,7 @@ class Tree:
         return 1e5
 
 
-    def entropy_gain(self, S, ind, axis):
+    def entropy_gain(self, parent_entropy, S, ind, axis):
         """
         Compute entropy gain given data set, split index and axis of application
         """
@@ -106,18 +105,10 @@ class Tree:
         S_right = S[S[:,axis]>=self.forest_obj.grid[axis][ind]]
         S_left = S[S[:,axis]<self.forest_obj.grid[axis][ind]]
 
-        #print(S, ind, axis)
-        #print(S_right, S_left)
-
         right_entropy = self._compute_det_lamb(S_right)*len(S_right)/len(S)
         left_entropy = self._compute_det_lamb(S_left)*len(S_left)/len(S)
 
-
-        a = self._compute_det_lamb(S)
-        b = right_entropy
-        c = left_entropy
-        
-        return a - (b + c), len(S_left), len(S_right)
+        return parent_entropy - (right_entropy + left_entropy), len(S_left), len(S_right)
 
 
     def build_tree(self):
@@ -152,15 +143,19 @@ class Tree:
         opt_ind = -1
         opt_axis = -1
 
+        parent_entropy = self._compute_det_lamb(local_data)
+
         for ind, axis in ind_array:
 
-            entropy, left_size, right_size = self.entropy_gain(local_data, ind, axis)
+            entropy, left_size, right_size = self.entropy_gain(parent_entropy, local_data, ind, axis)
 
             if entropy > max_entropy and left_size > 2 and right_size > 2:
                 max_entropy = entropy
                 opt_ind, opt_axis = (ind, axis)
 
         return max_entropy, opt_ind, opt_axis
+
+
 
     def _get_new_quad(self, old_quad, axis, opt_ind):
         """
