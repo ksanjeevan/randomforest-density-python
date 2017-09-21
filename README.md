@@ -1,4 +1,4 @@
-# Density Estimation Forests
+# Density Estimation Forests in Python
 ## Using Kernel Density Estimation in Random Forests
 
 ### Introduction
@@ -9,7 +9,7 @@ _In probability and statistics, density estimation is the construction of an est
 
 _Random forests are an ensemble learning method that operate by constructing a multitude of decision trees and combining their results for predictions. Random decision forests correct for decision trees' habit of overfitting to their training set._
 
-In this project, a random forests method for density estimation is implemented. Following is the presentation of some of the steps, results, tests and comparisons.
+In this project, a random forests method for density estimation is implemented in python. Following is the presentation of some of the steps, results, tests, and comparisons.
 
 
 ### Random Forest Implementation
@@ -34,12 +34,12 @@ From _[Decision Forests for Classification,
 Regression, Density Estimation, Manifold
 Learning and Semi-Supervised Learning](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/decisionForests_MSR_TR_2011_114.pdf)_: 
 
-_A key aspect of decision forests is the fact that its component trees are all randomly different from one another. This leads to de-correlation between the individual tree predictions and, in turn, to improved gen- eralization. Forest randomness also helps achieve high robustness with respect to noisy data.Randomness is injected into the trees during the training phase. Two of the most popular ways of doing so are:_
+_A key aspect of decision forests is the fact that its component trees are all randomly different from one another. This leads to de-correlation between the individual tree predictions and, in turn, to improved generalization. Forest randomness also helps achieve high robustness with respect to noisy data.Randomness is injected into the trees during the training phase. Two of the most popular ways of doing so are:_
 * _[Random training data set sampling (e.g. bagging) ](https://en.wikipedia.org/wiki/Bootstrap_aggregating)_
 * _[Randomized node optimization](https://en.wikipedia.org/wiki/Random_subspace_method)_
 _These two techniques are not mutually exclusive and could be used together._
 
-The method is tested by sampling a combination of gaussians. In order to introduce randomness the node optimization is randomized by parameter _rho_, which is proportional to the available parameter search space at each node split. With a 50% _rho_ and 5 trees, we see the firsts results below:
+The method is tested by sampling a combination of gaussians. In order to introduce randomness the node optimization is randomized by parameter _rho_, with the available parameter search space at each node split proportional to it. With a 50% _rho_ and 5 trees, we see the firsts results below:
 
 
 <p align="center">
@@ -55,9 +55,9 @@ Performance is harder to measure when using random forests for density estimatio
 
 ### Leaf prediction using KDE 
 
-One of the main problems of [Kernel Desnity Estimation](https://web.as.uky.edu/statistics/users/pbreheny/621/F10/notes/10-28.pdf) is the choice of bandwidth. Many of the approaches to find it rely on assumptions of the underlying distribution, and perform poorly on clustered, real-world data (although there are methods that incroporate an [adaptive bandwidth](https://indico.cern.ch/event/548789/contributions/2258640/attachments/1327011/1992522/kde.pdf) effectively).
+One of the main problems of [Kernel Density Estimation](https://web.as.uky.edu/statistics/users/pbreheny/621/F10/notes/10-28.pdf) is the choice of bandwidth. Many of the approaches to find it rely on assumptions of the underlying distribution, and perform poorly on clustered, real-world data (although there are methods that incroporate an [adaptive bandwidth](https://indico.cern.ch/event/548789/contributions/2258640/attachments/1327011/1992522/kde.pdf) effectively).
 
-The module can work with any imlementation of the _Node_ class. In these firsts examples the _NodeGauss_ class is used, by fitting a gaussian distribution at each leaf. Below can be seen the results of using _NodeKDE_, where the compactness measure is still based on the gaussian differential entropy, but the leaf prediction is the result of the  KDE method. By looking for splits that optimize fitting a gaussian function, many of the multivariate bandwidth problems that KDE has are avoided, and Silverman's rule can be used with good results:
+The module can work with any imlementation of the _Node_ class. In these first examples the _NodeGauss_ class is used, by fitting a gaussian distribution at each leaf. Below can be seen the results of using _NodeKDE_, where the compactness measure is still based on the gaussian differential entropy, but the leaf prediction is the result of the  KDE method. By looking for splits that optimize fitting a gaussian function, many of the multivariate bandwidth problems that KDE has are avoided, and Silverman's rule for bandwidth selection can be used with good results:
 
 <p align="center">
 <img src="result_plots/density_comp_kde.png" width="400px"/>
