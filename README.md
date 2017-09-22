@@ -46,7 +46,7 @@ The method is tested by sampling a combination of gaussians. In order to introdu
 <img src="result_plots/density_estimation.png" width="400px"/>
 </p>
 
-Performance is harder to measure when using random forests for density estimation (as opposed to regression or classification) since we're in the unsupervised space. Here, the [Jensen-Shannon Divergence](https://en.wikipedia.org/wiki/Jensen%E2%80%93Shannon_divergence) is used as a comparison metric (whenever test data from a known distribution is used).
+Performance is harder to measure when using random forests for density estimation (as opposed to regression or classification) since we're in the unsupervised space. Here, the [Jensen-Shannon Divergence](https://en.wikipedia.org/wiki/Jensen%E2%80%93Shannon_divergence) is used as a comparison measure (whenever test data from a known distribution is used).
 
 <p align="center">
 <img src="result_plots/density_comp.png" width="400px"/>
@@ -78,5 +78,6 @@ Although it produces an overall much better JSD, it's worth noting that the top 
 * Other bottlenecks.
 * Refactor to reuse framework in classification and regression.
 * Fit unknown distributions / performance.
+* Use EMD as comparison metric.
 
 

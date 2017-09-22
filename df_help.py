@@ -101,16 +101,16 @@ class TestData(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def check_norm(self, plot_name):
+    def check_norm(self):
         pass
 
     @abc.abstractmethod
-    def compute_distribution(self, plot_name):
+    def compute_distribution(self):
         pass
 
 
     @abc.abstractmethod
-    def evaluate(self, plot_name):
+    def evaluate(self, x):
         pass
 
 
@@ -120,7 +120,7 @@ class TestData(abc.ABC):
 
 class TestDataGauss(TestData):
 
-    def __init__(self, params, fname, replace=False):
+    def __init__(self, params, fname, replace=False, partitions=100):
 
         self.replace = replace
         self.mu = params['mu']
@@ -129,7 +129,7 @@ class TestDataGauss(TestData):
         self.Z = [N/np.sum(self.n) for N in self.n]
 
         self.data = self.generate_data(fname=fname)
-        self.grid_obj = Grid(self.data, 100)
+        self.grid_obj = Grid(self.data, partitions)
         self.grid = self.grid_obj.axis
         
 
@@ -213,6 +213,56 @@ class TestDataGauss(TestData):
         plt.grid()
         fig.savefig('true_dist_check.png', format='png')
         plt.close()
+
+
+
+
+class TestDataAny(TestData):
+
+    def __init__(self, fname, partitions=100):
+
+        self.data = self.generate_data(fname=fname)
+
+        self.grid_obj = Grid(self.data, partitions)
+        self.grid = self.grid_obj.axis
+        
+        self.dist = self.compute_distribution()
+
+    def generate_data(self, fname='data.npy'):
+
+        if os.path.isfile(fname):
+            return np.load(fname)
+
+    def check_plot(self):
+
+        X = self.grid[0]
+        Y = self.grid[1]
+        
+        fig = plt.figure(figsize=(12, 12))
+        ax = fig.add_subplot(111)
+   
+        ax.scatter(*zip(*self.data), alpha=.5, c='k', s=10., lw=0)
+
+        plt.xlim(np.min(X), np.max(X))
+        plt.ylim(np.min(Y), np.max(Y))
+        plt.grid()
+        fig.savefig('init_data.png', format='png')
+        plt.close()
+
+
+    def check_norm(self):
+        pass
+
+    def compute_distribution(self):
+        pass
+
+    def evaluate(self, x):
+        pass
+
+
+
+
+
 
 
 
