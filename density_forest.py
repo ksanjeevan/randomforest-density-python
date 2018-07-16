@@ -3,23 +3,64 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
+import os 
 
 from df_help import *
 
 from grid import Grid
 from tree import Tree
 from node import NodeGauss, NodeKDE
+import argparse
 
 from pylab import *
 
 
+argparser = argparse.ArgumentParser(
+    description='randomforest-density: density estimation using random forests.')
+
+
+argparser.add_argument(
+    '-l',
+    '--leaf',
+    help='Choose what leaf estimator to use'
+    ' (Gaussian [\'gauss\'] or KDE [\'kde\'])',
+    default='gauss')
+
+argparser.add_argument(
+    '-d',
+    '--data',
+    help='Path to data (.npy file, shape (sample_zie, 2)).',
+    default='')
+
+argparser.add_argument(
+    '-g',
+    '--granularity',
+    help='Number of division for the Grid',
+    default=100)
+
+
+
+
+args = argparser.parse_args()
+assert args.leaf in ['kde', 'gauss'], "Pass valid leaf estimator"
+
+
+LEAF_DICT = {
+            'kde': NodeKDE,
+            'gauss': NodeGauss
+} 
+
+LEAF_TYPE = args.leaf
+MODE = 'est' if args.data else 'demo'
+DATA_PATH = args.data
+DIVS = args.granularity
 
 def gauss_entropy_func(S):
     """
     Gaussian differential entropy (ignoring constant terms since 
     we're interested in the delta).
     """
-    return np.log(np.linalg.det(np.cov(S, rowvar=False)))
+    return np.log(np.linalg.det(np.cov(S, rowvar=False)) + 1e-8)
 
 
 class DensityForest:
@@ -41,9 +82,6 @@ class DensityForest:
         self.grid = self.grid_obj.axis
         
         self.rho = rho
-
-
-
 
 
     def train(self):
@@ -90,7 +128,7 @@ class DensityForest:
         gris = 200.0
         ax.set_facecolor((gris/255, gris/255, gris/255))
 
-        ax.scatter(*zip(*self.data), alpha=.5, c='k', s=10., lw=0)
+        #ax.scatter(*zip(*self.data), alpha=.5, c='k', s=10., lw=0)
 
         plt.xlim(np.min(X), np.max(X))
         plt.ylim(np.min(Y), np.max(Y))
@@ -129,21 +167,22 @@ class DensityForest:
         fig = plt.figure(figsize=(10,10))
         ax = fig.add_subplot(111)
         
+        if MODE == 'demo':
+            color = ['lightcoral', 'dodgerblue', 'mediumseagreen', 'darkorange']
 
-        color = ['lightcoral', 'dodgerblue', 'mediumseagreen', 'darkorange']
-        for t in range(self.f_size):
-            for c, n in enumerate(forest[t].leaf_nodes):
+            for t in range(self.f_size):
+                print(len(forest[t].leaf_nodes))
+                for c, n in enumerate(forest[t].leaf_nodes):
 
-                [[i1, i2], [j1, j2]] = n.quad
-                x1, x2 = self.grid[0][i1], self.grid[0][i2]
-                y1, y2 = self.grid[1][j1], self.grid[1][j2]
-                
-                ax.fill_between([x1,x2], y1, y2, alpha=.15, color=color[c])
- 
-        pd.DataFrame(self.data, columns=['x', 'y']).plot(ax=ax, x='x', y='y', kind='scatter', lw=0, alpha=.6, s=20, c='k')
-        plt.savefig(path + 'combined.png', format='png')
-        plt.close()
-
+                    [[i1, i2], [j1, j2]] = n.quad
+                    x1, x2 = self.grid[0][i1], self.grid[0][i2]
+                    y1, y2 = self.grid[1][j1], self.grid[1][j2]
+                    
+                    ax.fill_between([x1,x2], y1, y2, alpha=.15, color=color[c])
+     
+            pd.DataFrame(self.data, columns=['x', 'y']).plot(ax=ax, x='x', y='y', kind='scatter', lw=0, alpha=.6, s=20, c='k')
+            plt.savefig(path + 'combined.png', format='png')
+            plt.close()
 
 
         return forest
@@ -181,8 +220,67 @@ class DensityForest:
 
 
 
+def _run_rf(data, grid_obj):
+
+    print('Starting...')
+    df_obj = DensityForest(data, grid_obj=grid_obj, f_size=5, rho=.5)
+    df_obj.node_class = LEAF_DICT[LEAF_TYPE]
+
+    print('Training...')
+    df_obj.train()
+    print('Estimating...')
+    pdf = df_obj.estimate()
+    print('Plotting...')
+    df_obj.plot_density(fname='density_estimation_kde.png')
+
+    return df_obj, pdf
+
+
+def run_demo():
+
+    params = {
+                'mu' : [[0, 0], [0, 20], [50, 40], [10, -20], [20,5]],
+                'cov': [[[1, 0], [0, 150]], [[90, 0], [0, 5]], [[4, 1], [1, 4]], [[40, 5], [5, 40]], [[90, 15], [15, 16]]],
+                'n':[700, 20, 200, 400, 300]}
+    gauss_data_obj = TestDataGauss(params=params, fname='data_new.npy', replace=False)
+    gauss_data_obj.check_plot()
+
+    df_obj, _ = _run_rf(gauss_data_obj.data, gauss_data_obj.grid_obj)
+
+    print('Comparing...')
+
+    comp = CompareDistributions(original=gauss_data_obj, estimate=df_obj)
+    comp.vizualize_both('density_comp_kde.png', show_data=False)
+
+
+def run():
+
+    data_obj = TestDataAny(fname=DATA_PATH, partitions=DIVS)
+ 
+    density_estimation, pdf = _run_rf(data_obj.data, data_obj.grid_obj)
+
+    pdf_path = os.path.dirname(DATA_PATH) 
+    np.save(pdf_path, pdf)
+
+    print('\tDensity estimation function stored at: %s'%pdf_path)
+
 
 if __name__ == "__main__":
+
+    if MODE == 'demo':
+
+        print('---------------------------')
+        print('DEMO')
+        print('---------------------------')
+        run_demo()
+    else:
+        print('---------------------------')
+        print('Density Estimation')
+        print('---------------------------')
+        run()
+
+
+
     '''
 
     params = {
@@ -191,47 +289,17 @@ if __name__ == "__main__":
             'n':[100, 100, 100, 100]}
 
 
-
     var = TestDataGauss(params=params, fname='data.npy')
     '''
-
-    
-    params = {
-            'mu' : [[0, 0], [0, 20], [50, 40], [10, -20], [20,5]],
-            'cov': [[[1, 0], [0, 150]], [[90, 0], [0, 5]], [[4, 1], [1, 4]], [[40, 5], [5, 40]], [[90, 15], [15, 16]]],
-            'n':[700, 20, 200, 400, 300]}
-
-
-
-    var = TestDataGauss(params=params, fname='data_new.npy', replace=False)
-    var.check_plot()
-
     '''
     foo = DensityForest(var.data, grid_obj=var.grid_obj, f_size=5, rho=.5)
     foo.train()
     foo.estimate()
     foo.plot_density()
 
-
     tri = CompareDistributions(original=var, estimate=foo)
     tri.vizualize_both('density_comp.png')
     '''
-
-    print('Starting...')
-    foo2 = DensityForest(var.data, grid_obj=var.grid_obj, f_size=5, rho=.5)
-    foo2.node_class = NodeKDE
-
-    print('Training...')
-    foo2.train()
-    print('Estimating...')
-    foo2.estimate()
-    print('Plotting...')
-    foo2.plot_density(fname='density_estimation_kde.png')
-
-    print('Comparing...')
-
-    tri = CompareDistributions(original=var, estimate=foo2)
-    tri.vizualize_both('density_comp_kde.png', show_data=False)
 
     #print(foo.forest[0].output([0, 40]))
 

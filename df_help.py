@@ -228,10 +228,14 @@ class TestDataAny(TestData):
         
         self.dist = self.compute_distribution()
 
+        self.check_plot()
+
     def generate_data(self, fname='data.npy'):
 
         if os.path.isfile(fname):
             return np.load(fname)
+        else:
+            raise ValueError('Enter valid path to source data.')
 
     def check_plot(self):
 

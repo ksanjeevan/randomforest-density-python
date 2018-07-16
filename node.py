@@ -78,10 +78,15 @@ class NodeGauss(Node):
         if leaf:
             self.cov = np.cov(data, rowvar=False)
             # Check cov positive semidef
-            #print(np.all(np.linalg.eigvals(np.cov(self.data, rowvar=False)) > 0))
-            self.sqrt_cov = np.sqrt(np.linalg.det(self.cov))
-            self.inv_cov = np.linalg.inv(self.cov)
-            self.mu = np.mean(data, axis=0)
+            # np.all(np.linalg.eigvals(np.cov(data, rowvar=False)) > 0)
+            if np.all(np.linalg.eigvals(np.cov(data, rowvar=False)) > 0):
+                self.sqrt_cov = np.sqrt(np.linalg.det(self.cov))
+                self.inv_cov = np.linalg.inv(self.cov)
+                self.mu = np.mean(data, axis=0)
+            else:
+                self.sqrt_cov = 1
+                self.inv_cov = np.zeros(self.cov.shape)
+                self.mu = np.mean(data, axis=0)
 
 
     def leaf_output(self, x):
@@ -93,10 +98,8 @@ class NodeGauss(Node):
             
 
 
-
-
 def h_rot(x, d):
-    return math.pow(len(x), -(2.0)/(d+4))*np.var(x, axis=0)
+    return math.pow(len(x), -(2.0)/(d+4))*np.var(x, axis=0) + 1e-8
 
 
 class NodeKDE(Node):
@@ -115,6 +118,12 @@ class NodeKDE(Node):
             h = h_rot(data, len(data[0]))
 
             self.H = [[h[0], 0],[0, h[1]]]
+            '''
+            print('-------------------')
+            print(data)
+            print(data.shape)
+            print(self.H)
+            '''
 
             self.H_inv = np.linalg.inv(self.H)
             self.H_inv_sqrt_det = np.sqrt(np.linalg.det(self.H_inv))

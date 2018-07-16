@@ -1,6 +1,36 @@
 # Density Estimation Forests in Python
-## Using Kernel Density Estimation in Random Forests
+## Kernel Density Estimation in Random Forests
 
+### Usage
+
+Running --help
+```bash
+usage: density_forest.py [-h] [-l LEAF] [-d DATA] [-g GRANULARITY]
+
+randomforest-density: density estimation using random forests.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -l LEAF, --leaf LEAF  Choose what leaf estimator to use (Gaussian ['gauss']
+                        or KDE ['kde'])
+  -d DATA, --data DATA  Path to data (.npy file, shape (sample_zie, 2)).
+  -g GRANULARITY, --granularity GRANULARITY
+                        Number of division for the Grid
+```
+
+Run demo (will produce all the plots seen below):
+
+```bash
+python3 density_forest.py -l kde
+```
+
+
+Run own data:
+
+```bash
+python3 density_forest.py -d data_test.npy -l gauss
+```
+---
 ### Introduction
 
 
@@ -34,10 +64,13 @@ From _[Decision Forests for Classification,
 Regression, Density Estimation, Manifold
 Learning and Semi-Supervised Learning](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/decisionForests_MSR_TR_2011_114.pdf)_: 
 
-_A key aspect of decision forests is the fact that its component trees are all randomly different from one another. This leads to de-correlation between the individual tree predictions and, in turn, to improved generalization. Forest randomness also helps achieve high robustness with respect to noisy data.Randomness is injected into the trees during the training phase. Two of the most popular ways of doing so are:_
-* _[Random training data set sampling (e.g. bagging) ](https://en.wikipedia.org/wiki/Bootstrap_aggregating)_
+_A key aspect of decision forests is the fact that its component trees are all randomly different from one another. This leads to de-correlation between the individual tree predictions and, in turn, to improved generalization. Forest randomness also helps achieve high robustness with respect to noisy data.
+Randomness is injected into the trees during the training phase. Two of the most popular ways of doing so are:_
+
+* _[Random training data set sampling (e.g. bagging) ](https://en.wikipedia.org/wiki/Bootstrap_aggregating)_
 * _[Randomized node optimization](https://en.wikipedia.org/wiki/Random_subspace_method)_
-_These two techniques are not mutually exclusive and could be used together._
+
+_These two techniques are not mutually exclusive and could be used together._
 
 The method is tested by sampling a combination of gaussians. In order to introduce randomness the node optimization is randomized by parameter _rho_, with the available parameter search space at each node split proportional to it. With a 50% _rho_ and 5 trees, we see the firsts results below:
 
